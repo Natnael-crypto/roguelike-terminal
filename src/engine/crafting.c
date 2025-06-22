@@ -364,7 +364,10 @@ int crafting_execute(CraftRecipe *recipe, Entity *crafter, RNGState *rng) {
                 if (consume > it->stack_count) consume = it->stack_count;
                 it->stack_count -= consume;
                 remaining -= consume;
-                if (it->stack_count <= 0) inventory_remove(crafter, i);
+                if (it->stack_count <= 0) {
+                    inventory_remove(crafter, i);
+                    item_free(it);
+                }
             }
         }
     }
@@ -382,7 +385,9 @@ int crafting_execute(CraftRecipe *recipe, Entity *crafter, RNGState *rng) {
             result->heal_amount = recipe->result.heal_amount;
             result->stack_count = 1;
             memcpy(result->stat_mods, recipe->result.stat_mods, sizeof(result->stat_mods));
-            inventory_add(crafter, result);
+            if (inventory_add(crafter, result) != 0) {
+                item_free(result);
+            }
         }
     }
     return 0;

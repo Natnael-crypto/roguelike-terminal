@@ -134,7 +134,9 @@ int quest_reward(Quest *q, Entity *player) {
             it->damage_sides = q->reward_item.damage_sides;
             it->armor_value = q->reward_item.armor_value;
             it->heal_amount = q->reward_item.heal_amount;
-            inventory_add(player, it);
+            if (inventory_add(player, it) != 0) {
+                item_free(it);
+            }
         }
     }
     return q->reward_gold;

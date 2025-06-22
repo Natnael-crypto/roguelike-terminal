@@ -16,12 +16,16 @@ void dungeon_set_chunk_size(int w, int h) {
 
 static void chunk_write_tile(int x, int y, char tile) {
     if (x < 0 || y < 0 || x >= chunk_width || y >= chunk_height) return;
-    chunk_buf[x * chunk_width + y] = tile;
+    int idx = x * chunk_height + y;
+    if (idx < 0 || idx >= CHUNK_BUF_SIZE) return;
+    chunk_buf[idx] = tile;
 }
 
 static char chunk_read_tile(int x, int y) {
     if (x < 0 || y < 0 || x >= chunk_width || y >= chunk_height) return TILE_WALL;
-    return chunk_buf[x * chunk_width + y];
+    int idx = x * chunk_height + y;
+    if (idx < 0 || idx >= CHUNK_BUF_SIZE) return TILE_WALL;
+    return chunk_buf[idx];
 }
 
 static void dungeon_generate_chunk_terrain(const Dungeon *d) {

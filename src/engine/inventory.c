@@ -22,6 +22,16 @@ int inventory_remove(Entity *owner, int slot) {
         owner->inventory[i] = owner->inventory[i + 1];
     }
     owner->inventory_count--;
+    /* Update equipment slots: items above the removed slot shifted down by 1 */
+    for (int s = 0; s < SLOT_COUNT; s++) {
+        if (owner->equipment[s] == slot) {
+            /* The equipped item was removed */
+            owner->equipment[s] = -1;
+        } else if (owner->equipment[s] > slot) {
+            /* An equipped item shifted down */
+            owner->equipment[s]--;
+        }
+    }
     return 0;
 }
 
@@ -82,13 +92,17 @@ int inventory_use(Entity *owner, int slot) {
 
     if (it->type == ITEM_POTION) {
         entity_heal(owner, it->heal_amount);
+        Item *used = (Item *)owner->inventory[slot];
         inventory_remove(owner, slot);
+        item_free(used);
         return 1;
     }
 
     if (it->type == ITEM_FOOD) {
         entity_heal(owner, 5);
+        Item *used = (Item *)owner->inventory[slot];
         inventory_remove(owner, slot);
+        item_free(used);
         return 1;
     }
 

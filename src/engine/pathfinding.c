@@ -49,6 +49,7 @@ int pf_find_path(Pathfinder *pf, const Map *map, int sx, int sy, int ex, int ey,
     start->h = heuristic(sx, sy, ex, ey);
     start->f = start->g + start->h;
     start->parent = -1;
+    start->generation = pf->generation;
     start->closed = false;
     start->open = true;
     pf->open_list[pf->open_count++] = sx + sy * MAX_MAP_WIDTH;
@@ -108,17 +109,18 @@ int pf_find_path(Pathfinder *pf, const Map *map, int sx, int sy, int ex, int ey,
             if (!is_walkable(map, nx, ny) && !(nx == ex && ny == ey)) continue;
 
             PFNode *neighbor = &pf->nodes[nx][ny];
-            if (neighbor->closed) continue;
+            if (neighbor->generation == pf->generation && neighbor->closed) continue;
 
             int ng = pf->nodes[cx][cy].g + costs[d];
 
-            if (!neighbor->open) {
+            if (neighbor->generation != pf->generation || !neighbor->open) {
                 neighbor->x = nx;
                 neighbor->y = ny;
                 neighbor->g = ng;
                 neighbor->h = heuristic(nx, ny, ex, ey);
                 neighbor->f = ng + neighbor->h;
                 neighbor->parent = cur_idx;
+                neighbor->generation = pf->generation;
                 neighbor->open = true;
                 neighbor->closed = false;
                 if (pf->open_count < PF_MAX_NODES) {

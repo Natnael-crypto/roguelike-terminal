@@ -28,11 +28,22 @@ typedef struct {
 #pragma pack(pop)
 
 static uint16_t compute_header_checksum(const SaveHeader *hdr) {
-    const uint8_t *bytes = (const uint8_t *)hdr;
+    /* Compute checksum using portable field-by-field approach */
     uint16_t sum = 0;
-    for (size_t i = 0; i < sizeof(SaveHeader) - sizeof(uint16_t); i++) {
-        sum ^= (uint16_t)bytes[i] << (i % 8);
-    }
+    sum ^= (uint16_t)(hdr->magic & 0xFFFF);
+    sum ^= (uint16_t)(hdr->magic >> 16);
+    sum ^= hdr->version;
+    sum ^= (uint16_t)hdr->flags;
+    sum ^= (uint16_t)(hdr->depth & 0xFFFF);
+    sum ^= (uint16_t)(hdr->depth >> 16);
+    sum ^= (uint16_t)(hdr->max_depth & 0xFFFF);
+    sum ^= (uint16_t)(hdr->turn_count & 0xFFFF);
+    sum ^= (uint16_t)(hdr->stats_turns & 0xFFFF);
+    sum ^= (uint16_t)(hdr->stats_kills & 0xFFFF);
+    sum ^= (uint16_t)(hdr->stats_items & 0xFFFF);
+    sum ^= (uint16_t)(hdr->stats_levels & 0xFFFF);
+    sum ^= (uint16_t)(hdr->seed & 0xFFFF);
+    sum ^= (uint16_t)(hdr->seed >> 16);
     return sum;
 }
 
@@ -79,10 +90,26 @@ int state_save_to_file(const World *w, const GameStats *stats, const char *path)
     hdr.seed = w->seed;
     hdr.checksum = compute_header_checksum(&hdr);
 
-    if (fwrite(&hdr, sizeof(SaveHeader), 1, f) != 1) {
-        fclose(f);
-        return -1;
-    }
+    /* Write header field-by-field (portable, no alignment issues) */
+    serializer_write_uint32(f, hdr.magic);
+    serializer_write_uint16(f, hdr.version);
+    serializer_write_uint8(f, hdr.flags);
+    serializer_write_int32(f, hdr.depth);
+    serializer_write_int32(f, hdr.max_depth);
+    serializer_write_int32(f, hdr.turn_count);
+    serializer_write_int32(f, hdr.stats_turns);
+    serializer_write_int32(f, hdr.stats_kills);
+    serializer_write_int32(f, hdr.stats_items);
+    serializer_write_int32(f, hdr.stats_levels);
+    serializer_write_int32(f, hdr.stats_damage_dealt);
+    serializer_write_int32(f, hdr.stats_damage_taken);
+    serializer_write_int32(f, hdr.stats_healed);
+    serializer_write_int32(f, hdr.stats_gold);
+    serializer_write_int32(f, hdr.stats_crits);
+    serializer_write_int32(f, hdr.monster_count);
+    serializer_write_int32(f, hdr.item_count);
+    serializer_write_uint32(f, hdr.seed);
+    serializer_write_uint16(f, hdr.checksum);
 
     serializer_write_uint32(f, (uint32_t)w->turn_count);
     serializer_write_uint32(f, (uint32_t)w->seed);
@@ -104,10 +131,27 @@ int state_load_from_file(World *w, GameStats *stats, const char *path) {
     if (!f) return -1;
 
     SaveHeader hdr;
-    if (fread(&hdr, sizeof(SaveHeader), 1, f) != 1) {
-        fclose(f);
-        return -1;
-    }
+    memset(&hdr, 0, sizeof(hdr));
+    /* Read header field-by-field (portable, no alignment issues) */
+    if (serializer_read_uint32(f, &hdr.magic) != 0) { fclose(f); return -1; }
+    serializer_read_uint16(f, &hdr.version);
+    serializer_read_uint8(f, &hdr.flags);
+    serializer_read_int32(f, &hdr.depth);
+    serializer_read_int32(f, &hdr.max_depth);
+    serializer_read_int32(f, &hdr.turn_count);
+    serializer_read_int32(f, &hdr.stats_turns);
+    serializer_read_int32(f, &hdr.stats_kills);
+    serializer_read_int32(f, &hdr.stats_items);
+    serializer_read_int32(f, &hdr.stats_levels);
+    serializer_read_int32(f, &hdr.stats_damage_dealt);
+    serializer_read_int32(f, &hdr.stats_damage_taken);
+    serializer_read_int32(f, &hdr.stats_healed);
+    serializer_read_int32(f, &hdr.stats_gold);
+    serializer_read_int32(f, &hdr.stats_crits);
+    serializer_read_int32(f, &hdr.monster_count);
+    serializer_read_int32(f, &hdr.item_count);
+    serializer_read_uint32(f, &hdr.seed);
+    serializer_read_uint16(f, &hdr.checksum);
 
     if (hdr.magic != SAVE_MAGIC) { fclose(f); return -2; }
     if (hdr.version != (uint16_t)SAVE_VERSION) { fclose(f); return -3; }
@@ -142,7 +186,10 @@ int state_load_from_file(World *w, GameStats *stats, const char *path) {
         int mw, mh;
         serializer_read_uint32(f, &tmp); mw = (int)tmp;
         serializer_read_uint32(f, &tmp); mh = (int)tmp;
-        serializer_read_raw(f, w->map->tiles, sizeof(char) * (size_t)mw * (size_t)mh);
+        /* Bounds check: prevent reading beyond map tiles array */
+        if (mw > 0 && mw <= MAX_MAP_WIDTH && mh > 0 && mh <= MAX_MAP_HEIGHT) {
+            serializer_read_raw(f, w->map->tiles, sizeof(char) * (size_t)mw * (size_t)mh);
+        }
     }
 
     fclose(f);

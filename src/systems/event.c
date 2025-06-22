@@ -44,6 +44,8 @@ void event_free_data(GameEvent *evt) {
 int event_queue_pop(EventQueue *eq, GameEvent *evt) {
     if (eq->count <= 0) return -1;
     *evt = eq->events[eq->head];
+    eq->events[eq->head].event_data = NULL;
+    eq->events[eq->head].own_data = false;
     eq->head = (eq->head + 1) % MAX_EVENTS;
     eq->count--;
     return 0;

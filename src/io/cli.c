@@ -23,7 +23,7 @@ int cli_init(CliContext *ctx, Game *game) {
     ctx->screen_height = 25;
     ctx->cursor_x = 0;
     ctx->cursor_y = 0;
-    strcpy(ctx->status_line, "Roguelike Terminal RPG v1.0");
+    snprintf(ctx->status_line, sizeof(ctx->status_line), "Roguelike Terminal RPG v1.0");
 
     input_set_raw(1);
     game->needs_render = true;

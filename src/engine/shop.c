@@ -94,7 +94,11 @@ int shop_buy(Merchant *m, Entity *buyer, int item_index) {
         it->armor_slot = SLOT_CHEST;
     }
 
-    inventory_add(buyer, it);
+    if (inventory_add(buyer, it) != 0) {
+        buyer->gold += price; /* Refund */
+        item_free(it);
+        return -1;
+    }
     m->items_for_sale[item_index] = -1;
     return 0;
 }

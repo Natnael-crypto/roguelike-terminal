@@ -109,6 +109,7 @@ static int generate_dungeon_level(Game *game, int depth) {
         }
     }
     game->world.monster_count = 0;
+    ai_clear_cache();
 
     int mon_count = game->config.dungeon.monster_density * 3 + rng_range(&game->rng, 0, 5);
     generate_monsters_for_level(game, depth, mon_count);
@@ -176,6 +177,12 @@ int game_init(Game *game, GameConfig *cfg) {
     game->world.player->inventory_capacity = MAX_INVENTORY_SLOTS;
     game->world.player->inventory_count = 0;
     game->world.player->inventory = (void **)malloc(sizeof(void *) * MAX_INVENTORY_SLOTS);
+    if (!game->world.player->inventory) {
+        free(game->world.player);
+        game->world.player = NULL;
+        return -1;
+    }
+    memset(game->world.player->inventory, 0, sizeof(void *) * MAX_INVENTORY_SLOTS);
     game->world.player->vision_range = FOV_RADIUS;
 
     int rc = generate_dungeon_level(game, 1);
@@ -385,7 +392,7 @@ void game_handle_input(Game *game, int key) {
                 }
             } else if (!world_is_blocked(&game->world, nx, ny)) {
                 world_move_entity(&game->world, game->world.player, nx, ny);
-            } else {
+            } else if (map_in_bounds(game->world.map, nx, ny)) {
                 char edge_tile = game->world.map->tiles[nx][ny];
                 if (edge_tile == TILE_WALL) {
                     game_add_message(game, "A wall blocks your path.");

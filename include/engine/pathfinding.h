@@ -11,6 +11,7 @@ typedef struct {
     int x, y;
     int g, h, f;
     int parent;
+    int generation;
     bool closed;
     bool open;
 } PFNode;

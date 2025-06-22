@@ -82,11 +82,13 @@ int rng_weighted(RNGState *rng, const int *weights, int count) {
 }
 
 static void swap(void *a, void *b, size_t size) {
-    char tmp[64];
-    size_t s = size > 64 ? 64 : size;
-    memcpy(tmp, a, s);
-    memcpy(a, b, s);
-    memcpy(b, tmp, s);
+    char *pa = (char *)a;
+    char *pb = (char *)b;
+    for (size_t i = 0; i < size; i++) {
+        char tmp = pa[i];
+        pa[i] = pb[i];
+        pb[i] = tmp;
+    }
 }
 
 void rng_shuffle(RNGState *rng, void *array, int count, size_t size) {

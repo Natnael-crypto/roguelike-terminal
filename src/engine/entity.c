@@ -65,6 +65,12 @@ Entity *entity_create(const char *name, char glyph, int x, int y) {
 void entity_destroy(Entity *e) {
     if (!e) return;
     if (e->inventory) {
+        for (int i = 0; i < e->inventory_count; i++) {
+            Item *it = (Item *)e->inventory[i];
+            if (it) {
+                item_free(it);
+            }
+        }
         free(e->inventory);
         e->inventory = NULL;
     }
