@@ -4,6 +4,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "core/config.h"
 #include "core/game.h"
 #include "core/world.h"
@@ -14,6 +18,10 @@
 #include "engine/ai.h"
 #include "systems/rng.h"
 
+#ifdef __cplusplus
+}
+#endif
+
 static int fuzz_parse_input(const uint8_t *data, size_t size, char *cmd, int *x, int *y) {
     if (size < 3) return -1;
     *cmd = (char)data[0];
@@ -21,6 +29,10 @@ static int fuzz_parse_input(const uint8_t *data, size_t size, char *cmd, int *x,
     *y = data[2] % 25;
     return 0;
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (size < 4) return 0;
@@ -78,3 +90,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     game_destroy(&game);
     return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
