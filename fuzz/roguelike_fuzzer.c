@@ -52,7 +52,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (rc != 0) return 0;
 
     int steps = (size - 4) / 3;
-    if (steps > 20) steps = 20;
+    if (steps > 50) steps = 50;
 
     for (int i = 0; i < steps; i++) {
         if (game.state != GS_PLAYING) break;

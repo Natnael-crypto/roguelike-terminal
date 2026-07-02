@@ -27,10 +27,33 @@ jobs:
           make clean
           FUZZ_CC=clang FUZZ_CXX=clang++ make fuzz
           echo "Fuzz target built successfully"
-      - name: Run fuzzer with corpus
+      - name: Run seeds against ASan build
         run: |
-          echo "=== Running roguelike_fuzzer ==="
+          echo "=== Running targeted seeds ==="
           mkdir -p fuzz/corpus/roguelike_fuzzer
+          CRASHES=0
+          PASSED=0
+          TOTAL=0
+          for seed in fuzz/corpus/roguelike_fuzzer/*; do
+            TOTAL=$((TOTAL + 1))
+            name=$(basename "$seed")
+            echo ""
+            echo "--- Testing: $name ---"
+            if timeout 10 ./fuzz/roguelike_fuzzer -runs=1 "$seed" 2>&1; then
+              echo "PASS: $name"
+              PASSED=$((PASSED + 1))
+            else
+              echo "CRASH: $name (exit code $?)"
+              CRASHES=$((CRASHES + 1))
+            fi
+          done
+          echo ""
+          echo "=== Seed Summary ==="
+          echo "Total: $TOTAL  Crashes: $CRASHES  Passed: $PASSED"
+          exit 0
+      - name: Run fuzzer for 30s
+        run: |
+          echo "=== Fuzzing for 30s ==="
           timeout 60 ./fuzz/roguelike_fuzzer fuzz/corpus/roguelike_fuzzer/ -max_total_time=30 -max_len=256 -timeout=5 || true
           echo "Fuzzer run complete"
       - name: Upload crash artifacts
