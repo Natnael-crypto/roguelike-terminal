@@ -134,4 +134,3 @@ void mem_set_tracking(MemTracker *mt, bool track) {
     mt->tracking = track;
 }
 
-static int debug_level = 0;
