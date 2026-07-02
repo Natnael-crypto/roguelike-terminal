@@ -31,5 +31,6 @@ int pf_get_path(const Pathfinder *pf, int step, int *x, int *y);
 bool pf_path_exists(const Pathfinder *pf);
 int pf_path_length(const Pathfinder *pf);
 void pf_clear(Pathfinder *pf);
+Pathfinder *pf_get_global(void);
 
 #endif

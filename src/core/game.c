@@ -55,10 +55,8 @@ static void apply_theme_to_dungeon(Game *game, int depth) {
     int theme = dungeon_get_theme_for_depth(depth);
     const char *theme_name = dungeon_get_theme_name(depth);
 
-    /* Add decorations based on theme */
     dungeon_add_decoration(game->world.map, (DungeonTheme)theme, &game->rng);
 
-    /* Add vault room occasionally */
     if (rng_range(&game->rng, 0, 100) < 15) {
         Dungeon fake_d;
         fake_d.room_count = rng_range(&game->rng, 1, 3);
@@ -69,6 +67,8 @@ static void apply_theme_to_dungeon(Game *game, int depth) {
 }
 
 static int generate_dungeon_level(Game *game, int depth) {
+    event_queue_clear(&game->events);
+
     if (game->world.map) {
         free(game->world.map);
         game->world.map = NULL;
@@ -111,36 +111,7 @@ static int generate_dungeon_level(Game *game, int depth) {
     game->world.monster_count = 0;
 
     int mon_count = game->config.dungeon.monster_density * 3 + rng_range(&game->rng, 0, 5);
-    for (int i = 0; i < mon_count && i < MAX_MONSTERS; i++) {
-        int mx, my;
-        if (dungeon_find_random_floor(game->world.map, &mx, &my, &game->rng)) {
-            const char *mnames[] = {"rat", "goblin", "skeleton", "orc", "wraith", "bat"};
-            char glyphs[] = {'r', 'g', 's', 'o', 'W', 'b'};
-            int idx = (depth + i) % 6;
-            Entity *mon = entity_create(mnames[idx], glyphs[idx], mx, my);
-            if (mon) {
-                mon->is_monster = true;
-                mon->alive = true;
-                mon->blocks_movement = true;
-                mon->health = 10 + depth * 3 + rng_range(&game->rng, 0, 5);
-                mon->max_health = mon->health;
-                mon->attack = 3 + depth * 2;
-                mon->defense = 1 + depth;
-                mon->strength = 8 + depth;
-                mon->dexterity = 8 + depth / 2;
-                mon->damage_dice = 1;
-                mon->damage_sides = 4 + depth;
-                mon->damage_bonus = depth;
-                mon->xp_value = 10 + depth * 5;
-                mon->behavior = AI_WANDER;
-                mon->alert_range = 6 + depth;
-                mon->speed = 80 + rng_range(&game->rng, 0, 40);
-                mon->vision_range = 8;
-                entity_apply_status(mon, 0, 0, 0, 0);
-                world_add_monster(&game->world, mon);
-            }
-        }
-    }
+    generate_monsters_for_level(game, depth, mon_count);
 
     for (int i = 0; i < game->world.item_count; i++) {
         if (game->world.items[i]) {
@@ -152,35 +123,9 @@ static int generate_dungeon_level(Game *game, int depth) {
     game->world.item_count = 0;
 
     int item_count = game->config.dungeon.item_density * 2 + rng_range(&game->rng, 0, 3);
-    for (int i = 0; i < item_count && i < MAX_ITEMS; i++) {
-        int ix, iy;
-        if (dungeon_find_random_floor(game->world.map, &ix, &iy, &game->rng)) {
-            const char *inames[] = {"potion", "scroll", "gold", "dagger", "shield"};
-            char iglyphs[] = {'!', '?', '$', '/', '['};
-            ItemType itypes[] = {ITEM_POTION, ITEM_SCROLL, ITEM_GOLD, ITEM_WEAPON, ITEM_ARMOR};
-            int idx = rng_range(&game->rng, 0, 5);
-            Item *it = item_create(inames[idx], iglyphs[idx], itypes[idx]);
-            if (it) {
-                it->x = ix;
-                it->y = iy;
+    generate_items_for_level(game, depth, item_count);
 
-                if (itypes[idx] == ITEM_POTION) {
-                    it->heal_amount = rng_range(&game->rng, 5, 20);
-                } else if (itypes[idx] == ITEM_GOLD) {
-                    it->value = rng_range(&game->rng, 5, 50);
-                } else if (itypes[idx] == ITEM_WEAPON) {
-                    it->damage_dice = 1;
-                    it->damage_sides = 4 + depth / 2;
-                    it->damage_bonus = depth / 2;
-                } else if (itypes[idx] == ITEM_ARMOR) {
-                    it->armor_value = 1 + depth / 3;
-                    it->armor_slot = SLOT_CHEST;
-                }
-
-                world_add_item(&game->world, it);
-            }
-        }
-    }
+    apply_theme_to_dungeon(game, depth);
 
     game_update_fov(game);
     game_add_message(game, "You enter dungeon level %d.", depth);
@@ -320,10 +265,19 @@ int game_tick(Game *game) {
         ai_update(mon, &game->world);
     }
 
-    game_update_fov(game);
+    GameEvent tick_evt = event_make(EV_TICK, 0, 0, 0, 0, game->tick_count, game->world.turn_count);
+    int *tick_data = (int *)malloc(sizeof(int) * 2);
+    if (tick_data) {
+        tick_data[0] = game->tick_count;
+        tick_data[1] = game->world.turn_count;
+        event_queue_push_heap(&game->events, &tick_evt, tick_data);
+    }
 
-    GameEvent evt = event_make(EV_TICK, 0, 0, 0, 0, game->tick_count, game->world.turn_count);
-    event_queue_push(&game->events, &evt);
+    while (event_queue_pop(&game->events, &tick_evt) == 0) {
+        if (tick_evt.event_data && tick_evt.own_data) {
+            free(tick_evt.event_data);
+        }
+    }
 
     game->needs_render = true;
     return 0;
@@ -432,7 +386,15 @@ void game_handle_input(Game *game, int key) {
             } else if (!world_is_blocked(&game->world, nx, ny)) {
                 world_move_entity(&game->world, game->world.player, nx, ny);
             } else {
-                game_add_message(game, "Something blocks your path.");
+                char edge_tile = game->world.map->tiles[nx][ny];
+                if (edge_tile == TILE_WALL) {
+                    game_add_message(game, "A wall blocks your path.");
+                } else {
+                    game_add_message(game, "Something blocks your path.");
+                }
+                if (edge_tile == TILE_LAVA) {
+                    game->world.player->health -= 1;
+                }
             }
         }
 

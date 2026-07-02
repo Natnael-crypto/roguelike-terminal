@@ -3,6 +3,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+static Pathfinder global_pathfinder;
+static bool global_pf_initialized = false;
+
+Pathfinder *pf_get_global(void) {
+    if (!global_pf_initialized) {
+        memset(&global_pathfinder, 0, sizeof(Pathfinder));
+        global_pathfinder.generation = 1;
+        global_pf_initialized = true;
+    }
+    return &global_pathfinder;
+}
+
 void pf_init(Pathfinder *pf) {
     memset(pf, 0, sizeof(Pathfinder));
     pf->generation = 1;
@@ -22,12 +34,10 @@ int pf_find_path(Pathfinder *pf, const Map *map, int sx, int sy, int ex, int ey,
         return -1;
     if (sx == ex && sy == ey) return 0;
 
+    pf->generation++;
     if (pf->generation == 0) {
         memset(pf->nodes, 0, sizeof(pf->nodes));
         pf->generation = 1;
-    } else {
-        pf->generation++;
-        if (pf->generation == 0) pf->generation = 1;
     }
     pf->open_count = 0;
     pf->path_len = 0;

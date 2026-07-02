@@ -6,8 +6,41 @@
 #include <stdlib.h>
 #include "systems/rng.h"
 
+
+#define AI_CACHE_SIZE 32
+static Entity *ai_target_cache[AI_CACHE_SIZE];
+static int ai_target_cache_count = 0;
+
+void ai_cache_target(Entity *target) {
+    if (!target) return;
+    if (ai_target_cache_count < AI_CACHE_SIZE) {
+        ai_target_cache[ai_target_cache_count++] = target;
+    }
+}
+
+void ai_clear_cache(void) {
+    ai_target_cache_count = 0;
+}
+
+static void ai_check_cache(Entity *e, World *w) {
+    for (int i = 0; i < ai_target_cache_count; i++) {
+        Entity *cached = ai_target_cache[i];
+        if (!cached) continue;
+        if (cached->alive) {
+            int dx = cached->x - e->x;
+            int dy = cached->y - e->y;
+            if (dx * dx + dy * dy <= e->alert_range * e->alert_range) {
+                ai_move_toward(e, w, cached->x, cached->y);
+                return;
+            }
+        }
+    }
+}
+
 void ai_update(Entity *e, World *w) {
     if (!e || !e->alive || !w) return;
+
+    ai_check_cache(e, w);
 
     switch (e->behavior) {
         case AI_WANDER:
@@ -70,6 +103,19 @@ void ai_melee_attack(Entity *e, World *w) {
 }
 
 void ai_move_toward(Entity *e, World *w, int tx, int ty) {
+    Pathfinder *pf = pf_get_global();
+    int path_len = pf_find_path(pf, w->map, e->x, e->y, tx, ty, map_is_walkable);
+
+    if (path_len > 1) {
+        int nx, ny;
+        pf_get_path(pf, 1, &nx, &ny);
+        if (!world_is_blocked(w, nx, ny)) {
+            world_move_entity(w, e, nx, ny);
+            return;
+        }
+    }
+
+    /* Fallback to simple movement if pathfinding fails (old behavior) */
     int dx = (tx > e->x) - (tx < e->x);
     int dy = (ty > e->y) - (ty < e->y);
 
@@ -437,6 +483,7 @@ Entity *ai_find_nearest_ally(Entity *e, const World *w, int range) {
             nearest = other;
         }
     }
+    if (nearest) ai_cache_target(nearest);
     return nearest;
 }
 
@@ -462,5 +509,7 @@ Entity *ai_find_weakest_enemy(Entity *e, const World *w, int range) {
             weakest = w->player;
         }
     }
+        if (weakest) ai_cache_target(weakest);
     return weakest;
 }
+

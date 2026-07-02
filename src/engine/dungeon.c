@@ -4,6 +4,50 @@
 #include <stdio.h>
 #include <time.h>
 
+#define CHUNK_BUF_SIZE (MAX_MAP_WIDTH * MAX_MAP_HEIGHT)
+static char chunk_buf[CHUNK_BUF_SIZE];
+static int chunk_width = MAX_MAP_WIDTH;
+static int chunk_height = MAX_MAP_HEIGHT;
+
+void dungeon_set_chunk_size(int w, int h) {
+    chunk_width = w;
+    chunk_height = h;
+}
+
+static void chunk_write_tile(int x, int y, char tile) {
+    if (x < 0 || y < 0 || x >= chunk_width || y >= chunk_height) return;
+    chunk_buf[x * chunk_width + y] = tile;
+}
+
+static char chunk_read_tile(int x, int y) {
+    if (x < 0 || y < 0 || x >= chunk_width || y >= chunk_height) return TILE_WALL;
+    return chunk_buf[x * chunk_width + y];
+}
+
+static void dungeon_generate_chunk_terrain(const Dungeon *d) {
+    if (chunk_width <= 0 || chunk_height <= 0) return;
+    memset(chunk_buf, TILE_WALL, CHUNK_BUF_SIZE);
+    for (int i = 0; i < d->room_count; i++) {
+        const Room *r = &d->rooms[i];
+        for (int y = r->y; y < r->y + r->h && y < chunk_height; y++) {
+            for (int x = r->x; x < r->x + r->w && x < chunk_width; x++) {
+                chunk_write_tile(x, y, TILE_FLOOR);
+            }
+        }
+    }
+}
+
+static void dungeon_apply_chunk_to_map(Map *m) {
+    for (int y = 0; y < m->height && y < chunk_height; y++) {
+        for (int x = 0; x < m->width && x < chunk_width; x++) {
+            char tile = chunk_read_tile(x, y);
+            if (tile != TILE_WALL) {
+                map_set_tile(m, x, y, tile);
+            }
+        }
+    }
+}
+
 typedef enum {
     DT_DEFAULT,
     DT_CAVE,
@@ -25,7 +69,7 @@ static char theme_floor_tile(DungeonTheme theme) {
     switch (theme) {
         case DT_CAVE: return '.';
         case DT_CRYPT: return ':';
-        case DT_FOREST: return '"';
+        case DT_FOREST: return '\"';
         case DT_LAVA: return '.';
         case DT_ICE: return ':';
         case DT_SEWER: return '~';
@@ -80,6 +124,8 @@ int dungeon_generate(Dungeon *d, int width, int height, int min_rooms, int max_r
     d->height = height;
     d->room_count = 0;
 
+    dungeon_set_chunk_size(width, height);
+
     int target = rng_range(rng, min_rooms, max_rooms + 1);
     int attempts = 0;
 
@@ -125,6 +171,7 @@ void dungeon_add_room(Dungeon *d, int x, int y, int w, int h) {
 
 int dungeon_place_on_map(const Dungeon *d, Map *m, int depth) {
     (void)depth;
+
     for (int i = 0; i < d->room_count; i++) {
         const Room *r = &d->rooms[i];
         map_carve_room(m, r->x, r->y, r->w, r->h);
@@ -137,6 +184,9 @@ int dungeon_place_on_map(const Dungeon *d, Map *m, int depth) {
             map_carve_corridor(m, r1->cx, r1->cy, r2->cx, r2->cy);
         }
     }
+
+    dungeon_generate_chunk_terrain(d);
+    dungeon_apply_chunk_to_map(m);
 
     m->room_count = d->room_count;
     for (int i = 0; i < d->room_count && i < MAX_DUNGEON_ROOMS; i++) {
@@ -212,8 +262,6 @@ const char *dungeon_get_theme_name(int depth) {
     return theme_names[idx];
 }
 
-/* === Biome-Specific Room Generation === */
-
 void dungeon_carve_crypt_room(Dungeon *d, Map *m, const Room *r, RNGState *rng) {
     for (int y = r->y; y < r->y + r->h; y++) {
         for (int x = r->x; x < r->x + r->w; x++) {
@@ -238,7 +286,7 @@ void dungeon_carve_forest_room(Dungeon *d, Map *m, const Room *r, RNGState *rng)
     for (int y = r->y; y < r->y + r->h; y++) {
         for (int x = r->x; x < r->x + r->w; x++) {
             if (map_in_bounds(m, x, y)) {
-                m->tiles[x][y] = rng_range(rng, 0, 100) < 30 ? '"' : TILE_FLOOR;
+                m->tiles[x][y] = rng_range(rng, 0, 100) < 30 ? '\"' : TILE_FLOOR;
             }
         }
     }
@@ -446,5 +494,3 @@ int dungeon_get_trap_chance(int depth) {
     DungeonTheme theme = dungeon_get_theme_for_depth(depth);
     return theme_trap_chance(theme) + depth / 5;
 }
-
-/* Already provided by dungeon_get_theme_name above */

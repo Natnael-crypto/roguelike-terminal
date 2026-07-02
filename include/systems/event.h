@@ -45,6 +45,8 @@ typedef struct {
     uint32_t timestamp;
     char data[MAX_EVENT_DATA];
     bool handled;
+    void *event_data;
+    bool own_data;
 } GameEvent;
 
 typedef struct {
@@ -58,6 +60,7 @@ typedef struct {
 
 void event_queue_init(EventQueue *eq);
 int event_queue_push(EventQueue *eq, const GameEvent *evt);
+int event_queue_push_heap(EventQueue *eq, const GameEvent *evt, void *data);
 int event_queue_pop(EventQueue *eq, GameEvent *evt);
 int event_queue_peek(const EventQueue *eq, GameEvent *evt);
 int event_queue_count(const EventQueue *eq);
@@ -65,5 +68,6 @@ void event_queue_clear(EventQueue *eq);
 bool event_queue_has_type(const EventQueue *eq, EventType type);
 int event_queue_remove_type(EventQueue *eq, EventType type);
 GameEvent event_make(EventType type, uint32_t source, uint32_t target, int x, int y, int v1, int v2);
+void event_free_data(GameEvent *evt);
 
 #endif
