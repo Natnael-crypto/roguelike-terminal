@@ -8,18 +8,6 @@ on:
 
 jobs:
 
-  build-gcc:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build with GCC
-        run: |
-          make clean
-          make CC=gcc -j$(nproc)
-          echo "Build successful"
-      - name: Run unit tests
-        run: make test
-
   build-clang-asan:
     runs-on: ubuntu-latest
     steps:

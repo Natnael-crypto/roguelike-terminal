@@ -282,7 +282,7 @@ void dialogue_generate_blacksmith(Dialogue *d, const char *npc_name) {
 
 void dialogue_generate_wizard(Dialogue *d, const char *npc_name) {
     dialogue_init(d, npc_name);
-    dialogue_add_node(d, 0, "Ah, a seeker of arcane knowledge! I am %s, keeper of the crystal archives.", npc_name);
+    { char buf[MAX_DIALOGUE_TEXT]; snprintf(buf, sizeof(buf), "Ah, a seeker of arcane knowledge! I am %s, keeper of the crystal archives.", npc_name); dialogue_add_node(d, 0, buf); }
     dialogue_add_node(d, 1, "I can identify magical items for you, or teach you a cantrip or two.");
     dialogue_add_node(d, 2, "The ancient tomes speak of a hidden vault beneath the dungeon. Few have returned.");
     dialogue_add_node(d, 3, "Let me channel my energy to reveal the secrets of your belongings.");
@@ -305,7 +305,7 @@ void dialogue_generate_wizard(Dialogue *d, const char *npc_name) {
 
 void dialogue_generate_priest(Dialogue *d, const char *npc_name) {
     dialogue_init(d, npc_name);
-    dialogue_add_node(d, 0, "Blessings of the gods upon you, traveler. I am %s, servant of the divine light.", npc_name);
+    { char buf[MAX_DIALOGUE_TEXT]; snprintf(buf, sizeof(buf), "Blessings of the gods upon you, traveler. I am %s, servant of the divine light.", npc_name); dialogue_add_node(d, 0, buf); }
     dialogue_add_node(d, 1, "Let me offer a prayer for your recovery. The light heals all wounds.");
     dialogue_add_node(d, 2, "The darkness grows in the depths. Ancient evils stir once more.");
     dialogue_add_node(d, 3, "I can bless your equipment to help against the undead hordes.");
@@ -328,7 +328,7 @@ void dialogue_generate_priest(Dialogue *d, const char *npc_name) {
 
 void dialogue_generate_town_guard(Dialogue *d, const char *npc_name) {
     dialogue_init(d, npc_name);
-    dialogue_add_node(d, 0, "Halt! ... Oh, it's just you. %s, town watch. Keep your wits about you down there.", npc_name);
+    { char buf[MAX_DIALOGUE_TEXT]; snprintf(buf, sizeof(buf), "Halt! ... Oh, it's just you. %s, town watch. Keep your wits about you down there.", npc_name); dialogue_add_node(d, 0, buf); }
     dialogue_add_node(d, 1, "We've lost three good men to those caves. The goblins are getting bolder.");
     dialogue_add_node(d, 2, "If you clear out the goblin nest on level 3, I'll put in a good word with the quartermaster.");
     dialogue_add_node(d, 3, "Watch out for traps. The old tunnels are riddled with them.");
@@ -350,7 +350,7 @@ void dialogue_generate_town_guard(Dialogue *d, const char *npc_name) {
 
 void dialogue_generate_farmer(Dialogue *d, const char *npc_name) {
     dialogue_init(d, npc_name);
-    dialogue_add_node(d, 0, "Oi there, adventurer! %s's the name. Monsters keep trampling my crops at night.", npc_name);
+    { char buf[MAX_DIALOGUE_TEXT]; snprintf(buf, sizeof(buf), "Oi there, adventurer! %s's the name. Monsters keep trampling my crops at night.", npc_name); dialogue_add_node(d, 0, buf); }
     dialogue_add_node(d, 1, "If you could thin out the monster population, I'd be much obliged.");
     dialogue_add_node(d, 2, "I've got some supplies that might help you on your journey.");
     dialogue_add_node(d, 3, "Those giant rats eat my grain. Kill a dozen and I'll reward you handsomely.");
@@ -373,7 +373,7 @@ void dialogue_generate_farmer(Dialogue *d, const char *npc_name) {
 
 /* === Predefined Quest Templates === */
 
-static const struct {
+typedef struct {
     QuestType type;
     const char *name;
     const char *description;
@@ -381,7 +381,9 @@ static const struct {
     int reward_gold_mult;
     int reward_exp_mult;
     int min_level;
-} quest_templates[] = {
+} QuestTemplate;
+
+static const QuestTemplate quest_templates[] = {
     {QT_KILL_MONSTERS, "Goblin Extermination", "The town guard needs you to cull the goblin population infesting the upper levels.", 8, 5, 10, 1},
     {QT_KILL_MONSTERS, "Rat Infestation", "The innkeeper's cellar is overrun with giant rats. Thin their numbers.", 10, 3, 5, 1},
     {QT_KILL_MONSTERS, "Skeleton Uprising", "Ancient skeletons have risen from their graves. Send them back.", 6, 6, 15, 3},
@@ -422,15 +424,7 @@ const char *quest_get_template_name(int idx) {
 
 int quest_generate_from_template(Quest *q, uint32_t id, int template_idx, int player_level, RNGState *rng) {
     if (template_idx < 0 || template_idx >= quest_template_count) return -1;
-    const struct {
-        QuestType type;
-        const char *name;
-        const char *description;
-        int target_count;
-        int reward_gold_mult;
-        int reward_exp_mult;
-        int min_level;
-    } *t = &quest_templates[template_idx];
+    const QuestTemplate *t = &quest_templates[template_idx];
     
     (void)player_level;
     
