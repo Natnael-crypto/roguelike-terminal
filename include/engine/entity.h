@@ -7,8 +7,6 @@
 #include "engine/map.h"
 #include "systems/rng.h"
 
-typedef struct Entity Entity;
-
 typedef struct {
     uint32_t id;
     char name[MAX_NAME_LEN];
@@ -46,6 +44,7 @@ typedef struct {
     int damage_sides;
     int damage_bonus;
     int xp_value;
+    int next_level_exp;
     int corpse_item_id;
     int faction_id;
     int vision_range;

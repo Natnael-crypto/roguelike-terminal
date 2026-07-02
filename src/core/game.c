@@ -55,7 +55,7 @@ static void apply_theme_to_dungeon(Game *game, int depth) {
     int theme = dungeon_get_theme_for_depth(depth);
     const char *theme_name = dungeon_get_theme_name(depth);
 
-    dungeon_add_decoration(game->world.map, (DungeonTheme)theme, &game->rng);
+    dungeon_add_decoration(game->world.map, theme, &game->rng);
 
     if (rng_range(&game->rng, 0, 100) < 15) {
         Dungeon fake_d;

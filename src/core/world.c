@@ -1,6 +1,7 @@
 #include "core/world.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int world_init(World *w, GameConfig *cfg) {
     memset(w, 0, sizeof(World));
