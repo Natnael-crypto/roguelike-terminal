@@ -14,18 +14,15 @@ jobs:
 
     - name: Build main game
       run: |
-        cd roguelike-terminal
         make clean
         make -j$(nproc)
 
     - name: Build with AddressSanitizer
       run: |
-        cd roguelike-terminal
         make asan -j$(nproc)
 
     - name: Run unit tests
       run: |
-        cd roguelike-terminal
         make test
 
   fuzz:
@@ -35,12 +32,10 @@ jobs:
 
     - name: Build fuzz target
       run: |
-        cd roguelike-terminal
         make fuzz
 
     - name: Run fuzzer (30 seconds)
       run: |
-        cd roguelike-terminal
         mkdir -p fuzz/corpus/roguelike_fuzzer
         timeout 60 ./fuzz/roguelike_fuzzer fuzz/corpus/roguelike_fuzzer/ -max_total_time=30 -max_len=256 -timeout=5 || true
 
@@ -49,4 +44,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: fuzz-crashes
-        path: roguelike-terminal/fuzz/corpus/roguelike_fuzzer/**/*
+        path: fuzz/corpus/roguelike_fuzzer/**/*
