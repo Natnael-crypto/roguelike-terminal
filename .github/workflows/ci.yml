@@ -1,47 +1,53 @@
-name: Build and Test
+name: CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+    branches: [main]
 
 jobs:
-  build:
+
+  build-gcc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Build with GCC
+        run: |
+          make clean
+          make CC=gcc -j$(nproc)
+          echo "Build successful"
+      - name: Run unit tests
+        run: make test
 
-    - name: Build main game
-      run: |
-        make clean
-        make -j$(nproc)
-
-    - name: Build with AddressSanitizer
-      run: |
-        make asan -j$(nproc)
-
-    - name: Run unit tests
-      run: |
-        make test
+  build-clang-asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with Clang + ASan
+        run: |
+          make clean
+          make CC=clang asan -j$(nproc)
+          echo "ASan build successful"
 
   fuzz:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Build fuzz target
-      run: |
-        make fuzz
-
-    - name: Run fuzzer (30 seconds)
-      run: |
-        mkdir -p fuzz/corpus/roguelike_fuzzer
-        timeout 60 ./fuzz/roguelike_fuzzer fuzz/corpus/roguelike_fuzzer/ -max_total_time=30 -max_len=256 -timeout=5 || true
-
-    - name: Upload crash artifacts
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: fuzz-crashes
-        path: fuzz/corpus/roguelike_fuzzer/**/*
+      - uses: actions/checkout@v4
+      - name: Build fuzz target
+        run: |
+          make clean
+          FUZZ_CC=clang FUZZ_CXX=clang++ make fuzz
+          echo "Fuzz target built successfully"
+      - name: Run fuzzer with corpus
+        run: |
+          echo "=== Running roguelike_fuzzer ==="
+          mkdir -p fuzz/corpus/roguelike_fuzzer
+          timeout 60 ./fuzz/roguelike_fuzzer fuzz/corpus/roguelike_fuzzer/ -max_total_time=30 -max_len=256 -timeout=5 || true
+          echo "Fuzzer run complete"
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: fuzz/corpus/roguelike_fuzzer/**/*
