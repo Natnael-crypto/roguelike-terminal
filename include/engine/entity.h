@@ -7,7 +7,7 @@
 #include "engine/map.h"
 #include "systems/rng.h"
 
-typedef struct {
+typedef struct Entity {
     uint32_t id;
     char name[MAX_NAME_LEN];
     char glyph;
@@ -35,7 +35,7 @@ typedef struct {
     int slow_turns;
     int haste_turns;
     uint32_t flags;
-    Entity *target;
+    struct Entity *target;
     int inventory_capacity;
     int inventory_count;
     void **inventory;
