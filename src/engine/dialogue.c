@@ -249,10 +249,7 @@ void dialogue_generate_merchant(Dialogue *d, const char *npc_name) {
 
 void dialogue_generate_quest_giver(Dialogue *d, const char *npc_name, const Quest *q) {
     dialogue_generate_greeting(d, npc_name, true, false);
-    char quest_text[MAX_DIALOGUE_TEXT];
-    snprintf(quest_text, sizeof(quest_text), "%s needs your help: %s\n%s",
-             npc_name, q->name, q->description);
-    dialogue_add_node(d, 11, quest_text);
+    dialogue_add_node(d, 11, q->description);
     dialogue_add_response(d, 0, "What's the quest?", 11);
     dialogue_add_response(d, 11, "I accept!", 99);
     dialogue_add_response(d, 11, "Maybe another time.", 0);
