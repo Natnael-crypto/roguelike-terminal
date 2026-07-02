@@ -122,9 +122,6 @@ int state_load_from_file(World *w, GameStats *stats, const char *path) {
     w->game_won = (hdr.flags & 2) != 0;
     w->seed = hdr.seed;
 
-    int mcount = hdr.monster_count;
-    int icount = hdr.item_count;
-
     stats->turn_count = hdr.stats_turns;
     stats->monster_kills = hdr.stats_kills;
     stats->items_collected = hdr.stats_items;
