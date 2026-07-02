@@ -16,6 +16,7 @@ extern "C" {
 #include "engine/combat.h"
 #include "engine/dungeon.h"
 #include "engine/ai.h"
+#include "engine/inventory.h"
 #include "systems/rng.h"
 
 #ifdef __cplusplus
@@ -65,7 +66,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         int tx, ty;
         fuzz_parse_input(data + pos, size - pos, (char *)&cmd, &tx, &ty);
 
-        switch (cmd % 12) {
+        switch (cmd % 16) {
             case 0: game_handle_input(&game, 'w'); break;
             case 1: game_handle_input(&game, 's'); break;
             case 2: game_handle_input(&game, 'a'); break;
@@ -78,6 +79,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             case 9: game_tick(&game); break;
             case 10: game_tick(&game); break;
             case 11: game_handle_input(&game, 'i'); break;
+            case 12: if (game.world.player && game.world.player->inventory_count > 0) inventory_equip(game.world.player, 0); break;
+            case 13: if (game.world.player) inventory_unequip(game.world.player, SLOT_WEAPON); break;
+            case 14: if (game.world.player && game.world.player->inventory_count > 0) inventory_use(game.world.player, 0); break;
+            case 15: game_tick(&game); break;
         }
 
         if (game.world.map && game.world.player) {
