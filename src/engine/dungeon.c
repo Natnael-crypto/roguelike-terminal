@@ -65,32 +65,6 @@ static const char *theme_names[] = {
     "dark sewers", "abandoned temple"
 };
 
-static char theme_floor_tile(DungeonTheme theme) {
-    switch (theme) {
-        case DT_CAVE: return '.';
-        case DT_CRYPT: return ':';
-        case DT_FOREST: return '\"';
-        case DT_LAVA: return '.';
-        case DT_ICE: return ':';
-        case DT_SEWER: return '~';
-        case DT_TEMPLE: return '.';
-        default: return '.';
-    }
-}
-
-static char theme_wall_tile(DungeonTheme theme) {
-    switch (theme) {
-        case DT_CAVE: return '#';
-        case DT_CRYPT: return '#';
-        case DT_FOREST: return '%';
-        case DT_LAVA: return '#';
-        case DT_ICE: return '#';
-        case DT_SEWER: return '#';
-        case DT_TEMPLE: return '#';
-        default: return '#';
-    }
-}
-
 static int theme_water_chance(DungeonTheme theme) {
     switch (theme) {
         case DT_SEWER: return 15;
@@ -419,7 +393,7 @@ void dungeon_apply_theme_placement(const Dungeon *d, Map *m, int theme, RNGState
     }
 }
 
-void dungeon_add_decoration(Map *m, DungeonTheme theme, RNGState *rng) {
+void dungeon_add_decoration(Map *m, int theme, RNGState *rng) {
     int wc = theme_water_chance(theme);
     for (int y = 1; y < m->height - 1; y++) {
         for (int x = 1; x < m->width - 1; x++) {
@@ -478,11 +452,11 @@ void dungeon_add_vault_room(Dungeon *d, Map *m, RNGState *rng) {
     m->tiles[door_x][door_y] = TILE_DOOR;
 }
 
-DungeonTheme dungeon_get_theme_for_depth(int depth) {
+int dungeon_get_theme_for_depth(int depth) {
     int idx = (depth - 1) % 8;
     if (idx < 0) idx = 0;
     if (idx > 7) idx = 7;
-    return (DungeonTheme)idx;
+    return idx;
 }
 
 int dungeon_get_monster_density(int depth) {
