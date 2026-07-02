@@ -56,7 +56,6 @@ void cli_draw_status(CliContext *ctx) {
     Entity *p = g->world.player;
 
     int hp_pct = p->max_health > 0 ? (p->health * 100) / p->max_health : 0;
-    int mp_pct = p->max_mana > 0 ? (p->mana * 100) / p->max_mana : 0;
 
     snprintf(status, sizeof(status),
         "HP:%3d/%3d(%d%%) MP:%3d/%3d LV:%d EXP:%d/%d D:%d G:%d",

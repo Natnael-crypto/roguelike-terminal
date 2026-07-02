@@ -45,6 +45,7 @@ typedef enum {
     KEY_SPACE = ' '
 } KeyCode;
 
+void input_set_raw(int enable);
 int input_get_key(void);
 int input_get_key_timeout(int ms);
 void input_flush(void);

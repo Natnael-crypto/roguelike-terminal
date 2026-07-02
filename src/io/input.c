@@ -20,7 +20,7 @@ static int terminal_raw_mode = 0;
 static HANDLE hstdin;
 static DWORD old_mode;
 
-static void input_set_raw(int enable) {
+void input_set_raw(int enable) {
     if (enable) {
         hstdin = GetStdHandle(STD_INPUT_HANDLE);
         GetConsoleMode(hstdin, &old_mode);
@@ -36,7 +36,7 @@ static void input_set_raw(int enable) {
 #else
 static struct termios old_tio;
 
-static void input_set_raw(int enable) {
+void input_set_raw(int enable) {
     if (enable) {
         struct termios new_tio;
         tcgetattr(STDIN_FILENO, &old_tio);

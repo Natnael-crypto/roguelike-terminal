@@ -241,7 +241,6 @@ void equipment_apply_stats(Entity *e, const Item *it, bool equipped) {
 
 void equipment_build_description(Item *it) {
     char desc[256] = {0};
-    char temp[64];
     int pos = 0;
     
     if (it->armor_value > 0) {
@@ -392,9 +391,9 @@ int equipment_get_set_bonus(int set_idx, int pieces_equipped) {
     return set->bonus_per_piece[idx];
 }
 
-StatModType equipment_get_set_bonus_type(int set_idx) {
-    if (set_idx < 0 || set_idx >= item_set_count) return MOD_HEALTH;
-    return item_sets[set_idx].bonus_type;
+int equipment_get_set_bonus_type(int set_idx) {
+    if (set_idx < 0 || set_idx >= item_set_count) return (int)MOD_HEALTH;
+    return (int)item_sets[set_idx].bonus_type;
 }
 
 int equipment_find_set_for_item(const Item *it) {
