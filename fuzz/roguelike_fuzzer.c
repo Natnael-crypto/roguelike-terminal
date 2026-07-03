@@ -80,22 +80,22 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         game_handle_input(&game, '>');
     }
 
-    /* Bug 3: Inventory desync — create items directly, equip, then remove */
+    /* Bug 3: Inventory desync — equip at slot 1, then remove slot 0 to shift array */
     if (size >= 5 && (data[4] % 8) == 2) {
         Entity *p = game.world.player;
         if (p) {
-            /* Create two items directly in inventory */
-            Item *sword = item_create("iron sword", '/', ITEM_WEAPON);
+            /* Add potion at slot 0, sword at slot 1 */
             Item *potion = item_create("health potion", '!', ITEM_POTION);
-            if (sword) { sword->equipped = false; inventory_add(p, sword); }
+            Item *sword = item_create("iron sword", '/', ITEM_WEAPON);
             if (potion) { potion->equipped = false; inventory_add(p, potion); }
-            /* Equip the sword at slot 0 */
-            if (p->inventory_count > 0)
-                inventory_equip(p, 0);
-            /* Use the potion at slot 1 — calls inventory_remove(1) which shifts array */
-            /* After shift, equipment[] still points to old slot index, now wrong item */
+            if (sword) { sword->equipped = false; inventory_add(p, sword); }
+            /* Equip the sword at slot 1: equipment[SLOT_WEAPON] = 1 */
             if (p->inventory_count > 1)
-                inventory_use(p, 1);
+                inventory_equip(p, 1);
+            /* Remove slot 0 (potion) — shifts sword from index 1 to 0,
+               but equipment[SLOT_WEAPON] still = 1 (stale, points to wrong item) */
+            if (p->inventory_count > 0)
+                inventory_remove(p, 0);
         }
     }
 
