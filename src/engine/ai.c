@@ -276,6 +276,7 @@ void ai_pack(Entity *e, World *w) {
         return;
     }
 
+    Entity *ally = ai_find_nearest_ally(e, w, 5);
     int allies_near = ai_count_allies_nearby(e, w, 5);
 
     if (ai_can_see_player(e, w) && allies_near >= 1) {
@@ -355,6 +356,10 @@ void ai_summoner(Entity *e, World *w) {
         e->behavior = AI_PATROL;
         return;
     }
+
+    /* Cache weakest enemy for targeting */
+    Entity *victim = ai_find_weakest_enemy(e, w, 10);
+    (void)victim;
 
     int allies_near = ai_count_allies_nearby(e, w, 6);
 

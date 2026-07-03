@@ -11,13 +11,16 @@ extern "C" {
 #include "core/config.h"
 #include "core/game.h"
 #include "core/world.h"
+#include "core/state.h"
 #include "engine/map.h"
 #include "engine/entity.h"
 #include "engine/combat.h"
 #include "engine/dungeon.h"
 #include "engine/ai.h"
 #include "engine/inventory.h"
+#include "engine/item.h"
 #include "systems/rng.h"
+#include "systems/event.h"
 
 #ifdef __cplusplus
 }
@@ -52,6 +55,59 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     int rc = game_init(&game, &cfg);
     if (rc != 0) return 0;
 
+    /* --- Bug-specific trigger sequences (deterministic) --- */
+
+    /* Bug 7: Map negative index — teleport player to left edge, then try to go further left */
+    if (size >= 5 && (data[4] % 8) == 0) {
+        if (game.world.player) {
+            game.world.player->x = 0;
+            game.world.player->y = 10;
+        }
+        game_handle_input(&game, 'a');  /* triggers tiles[-1][ny] read */
+    }
+
+    /* Bug 6: Event double-free — push heap events, teleport to stairs, descend */
+    if (size >= 5 && (data[4] % 8) == 1) {
+        /* Push several heap-allocated events via game_tick */
+        for (int i = 0; i < 5; i++)
+            game_tick(&game);
+        /* Teleport player directly to stairs */
+        if (game.world.map && game.world.player) {
+            game.world.player->x = game.world.map->stairs_down_x;
+            game.world.player->y = game.world.map->stairs_down_y;
+        }
+        /* Descend — triggers event_queue_clear on already-freed slots */
+        game_handle_input(&game, '>');
+    }
+
+    /* Bug 3: Inventory desync — create items directly, equip, then remove */
+    if (size >= 5 && (data[4] % 8) == 2) {
+        Entity *p = game.world.player;
+        if (p) {
+            /* Create two items directly in inventory */
+            Item *sword = item_create("iron sword", '/', ITEM_WEAPON);
+            Item *potion = item_create("health potion", '!', ITEM_POTION);
+            if (sword) { sword->equipped = false; inventory_add(p, sword); }
+            if (potion) { potion->equipped = false; inventory_add(p, potion); }
+            /* Equip the sword at slot 0 */
+            if (p->inventory_count > 0)
+                inventory_equip(p, 0);
+            /* Use the potion at slot 1 — calls inventory_remove(1) which shifts array */
+            /* After shift, equipment[] still points to old slot index, now wrong item */
+            if (p->inventory_count > 1)
+                inventory_use(p, 1);
+        }
+    }
+
+    /* Bug 5: Serializer alignment — save then load raw packed struct */
+    if (size >= 5 && (data[4] % 8) == 3) {
+        GameStats stats;
+        state_reset_stats(&stats);
+        state_save_to_file(&game.world, &stats, "/tmp/fuzz_test_save.dat");
+        state_load_from_file(&game.world, &stats, "/tmp/fuzz_test_save.dat");
+    }
+
+    /* --- General random input fuzzing --- */
     int steps = (size - 4) / 3;
     if (steps > 50) steps = 50;
 

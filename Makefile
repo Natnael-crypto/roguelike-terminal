@@ -60,6 +60,7 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 	rm -f $(TEST_DIR)/*.o $(TEST_DIR)/test_*
 	rm -f $(TOOLS_DIR)/*.o $(TOOLS_DIR)/stress_sim $(TOOLS_DIR)/replay
+	rm -f $(FUZZ_DIR)/*.o $(FUZZ_DIR)/roguelike_fuzzer
 	rm -f *.gcno *.gcda *.gcov
 
 TEST_SRCS = $(wildcard $(TEST_DIR)/test_*.c)
@@ -94,13 +95,20 @@ $(TOOLS_DIR)/replay: $(TOOLS_DIR)/replay_analyzer.c $(filter-out $(SRC_DIR)/main
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 FUZZ_CC ?= clang
-FUZZ_CFLAGS = -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1 -std=c99 -Iinclude -Isrc
+FUZZ_CFLAGS = -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1 -std=c99 -Iinclude -Isrc -Wno-unused-parameter
 FUZZ_CXXFLAGS = -fsanitize=fuzzer,address,undefined -g -O1 -std=c++17 -Iinclude -Isrc
 FUZZ_CXX ?= clang++
-FUZZ_LIB_SRC = $(filter-out $(SRC_DIR)/main.o, $(OBJS:.o=.c))
+FUZZ_OBJS = $(FUZZ_DIR)/fuzz_%.o
+
+# Recompile every .o with ASan/UBSan for the fuzz target
+FUZZ_OBJ_LIST = $(patsubst %.c,$(FUZZ_DIR)/%.o,$(filter-out $(SRC_DIR)/main.c, $(SRCS)))
+
+$(FUZZ_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -c -o $@ $<
 
 fuzz: $(FUZZ_DIR)/roguelike_fuzzer
 	@echo "Fuzz target built: $(FUZZ_DIR)/roguelike_fuzzer"
 
-$(FUZZ_DIR)/roguelike_fuzzer: $(FUZZ_DIR)/roguelike_fuzzer.c $(filter-out $(SRC_DIR)/main.o, $(OBJS))
-	$(FUZZ_CXX) $(FUZZ_CXXFLAGS) $< $(filter-out $(SRC_DIR)/main.o, $(OBJS)) -o $@ $(LDFLAGS)
+$(FUZZ_DIR)/roguelike_fuzzer: $(FUZZ_DIR)/roguelike_fuzzer.c $(FUZZ_OBJ_LIST)
+	$(FUZZ_CXX) $(FUZZ_CXXFLAGS) $< $(FUZZ_OBJ_LIST) -o $@ $(LDFLAGS)
