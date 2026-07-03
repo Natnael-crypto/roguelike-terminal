@@ -276,7 +276,7 @@ void ai_pack(Entity *e, World *w) {
         return;
     }
 
-    Entity *ally = ai_find_nearest_ally(e, w, 5);
+    (void)ai_find_nearest_ally(e, w, 5);
     int allies_near = ai_count_allies_nearby(e, w, 5);
 
     if (ai_can_see_player(e, w) && allies_near >= 1) {
