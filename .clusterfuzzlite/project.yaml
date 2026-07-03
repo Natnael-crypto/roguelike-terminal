@@ -1,0 +1,6 @@
+language: c++
+sanitizers:
+  - address
+  - undefined
+fuzz_targets:
+  - roguelike_fuzzer
